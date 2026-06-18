@@ -340,7 +340,8 @@ ebp_tf <- function(fixed,
       method = "reml",
       fixed = fixed,
       call = call,
-      successful_bootstraps = NULL
+      successful_bootstraps = mse_estimates_tf$successful_bootstraps
+      #successful_bootstraps = NULL
     )
   } else {
     ebp_tf_out <- list(

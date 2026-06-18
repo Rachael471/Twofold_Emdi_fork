@@ -72,20 +72,8 @@ parametric_bootstrap_tf <- function(framework_ebp_tf,
 
 
   # Extract bootstrap results for domain and subdomain separately
-  #mse_dom_list <- lapply(mse_results, `[[`, "mse_dom")
-  #mse_subdom_list <- lapply(mse_results, `[[`, "mse_subdom")
-
-  # Filter out failed bootstraps
-  successful_indices <- which(vapply(mse_results, function(x) x$success, logical(1)))
-  failed_indices <- setdiff(seq_len(B), successful_indices)
-
-  message(length(successful_indices), " successful bootstraps, ",
-          length(failed_indices), " failed.")
-
-  # Extract only successful bootstrap results
-  mse_dom_list <- lapply(mse_results[successful_indices], `[[`, "mse_dom")
-  mse_subdom_list <- lapply(mse_results[successful_indices], `[[`, "mse_subdom")
-
+  mse_dom_list <- lapply(mse_results, `[[`, "mse_dom")
+  mse_subdom_list <- lapply(mse_results, `[[`, "mse_subdom")
 
   # Convert to 3D arrays (dom/subdom x indicators x B)
   mse_dom_array <- simplify2array(mse_dom_list)
@@ -103,8 +91,7 @@ parametric_bootstrap_tf <- function(framework_ebp_tf,
 
   return(list(
     mses_dom = mse_dom_df,
-    mses_subdom = mse_subdom_df,
-    successful_bootstraps = successful_indices
+    mses_subdom = mse_subdom_df
   ))
 
 
@@ -399,23 +386,17 @@ mse_estim_tf_wrapper <- function(i,
                                  interval,
                                  L,
                                  start_time) {
-  result <- tryCatch({
-    tmp <- mse_estim_tf(
-      framework_ebp_tf = framework_ebp_tf,
-      lambda = lambda,
-      shift = shift,
-      model_par_tf = model_par_tf,
-      gen_model_tf = gen_model_tf,
-      fixed = fixed,
-      transformation = transformation,
-      interval = interval,
-      L = L
-    )
-    list(success = TRUE, mse_dom = tmp$mse_dom, mse_subdom = tmp$mse_subdom)
-  }, error = function(e) {
-    message(sprintf("Bootstrap %d failed: %s", i, e$message))
-    list(success = FALSE, mse_dom = NULL, mse_subdom = NULL)
-  })
+  tmp <- mse_estim_tf(
+    framework_ebp_tf = framework_ebp_tf,
+    lambda = lambda,
+    shift = shift,
+    model_par_tf = model_par_tf,
+    gen_model_tf = gen_model_tf,
+    fixed = fixed,
+    transformation = transformation,
+    interval = interval,
+    L = L
+  )
 
   if (i %% 10 == 0 && i != B) {
     delta <- difftime(Sys.time(), start_time, units = "secs")
@@ -428,13 +409,12 @@ mse_estim_tf_wrapper <- function(i,
       remaining %% 3600 %/% 60, # minutes
       remaining %% 60 %/% 1
     )
-    message("\r", i, " of ", B, " Bootstrap iterations completed \t",
-            "Approximately ", remaining, " remaining \n")
+
+    message("\r", i, " of ", B, " Bootstrap iterations completed \t
+            Approximately ", remaining, " remaining \n")
     if (.Platform$OS.type == "windows") flush.console()
   }
-
-  return(result)
+  return(tmp)
 }
-
 
 
